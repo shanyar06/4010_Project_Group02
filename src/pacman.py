@@ -54,7 +54,7 @@ import random
 import os
 import pprint
 import gymnasium as gym
-from gym import spaces
+from gymnasium import spaces
 import numpy as np
 import graphicsDisplay
 import ghostAgents
