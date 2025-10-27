@@ -5,15 +5,17 @@ from pacmanAgents import GreedyAgent
 
 args = readCommand(sys.argv[1:])
 
-env = PacmanEnv(**args)
+NUM_EPISODES = 3
 
-obs = env.reset(**args)
+for i in range(NUM_EPISODES):
+    env = PacmanEnv(**args)
+    obs = env.reset(**args)
 
-done = False
+    done = False
 
-while not done:
-    obs, reward, done, info = env.step()
-    # env.render()
-print("Final reward:", reward)
+    while not done:
+        obs, reward, done, info = env.step()
+        # env.render()
+    print("Final reward:", reward)
 
-env.close()
+    env.close()

@@ -312,13 +312,15 @@ class ClassicGameRules:
 
     def win(self, state, game):
         if not self.quiet:
-            print("Pacman emerges victorious! Score: %d" % state.data.score)
+            print("Pacman emerges victorious!")
+            #print("Pacman emerges victorious! Score: %d" % state.data.score)
         game.gameOver = True
         return state.data.score
 
     def lose(self, state, game):
         if not self.quiet:
-            print("Pacman died! Score: %d" % state.data.score)
+            print("Pacman died!")
+            #print("Pacman died! Score: %d" % state.data.score)
         game.gameOver = True
 
     def getProgress(self, game):
