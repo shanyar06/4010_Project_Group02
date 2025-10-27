@@ -69,7 +69,7 @@ class PacmanEnv(gym.Env):
         for cpos in capsules:
             grid[int(cpos[1]), int(cpos[0])] = 5
         
-        print(grid)
+        #print(grid)
 
         return grid
 
