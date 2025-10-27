@@ -1,5 +1,5 @@
 **Introduction:** 
-This project applies Reinforcement Learning into our custom version of Pacman. In our case the agent learns how to navigate through a grid world maze, eat food pellets, and eat a ghost. The environment is designed to emulate an agent and gym-compatible environment interaction in a visual way in order to experiment with algorithms such as Q-Learning and Policy Iteration.
+- This project applies Reinforcement Learning into our custom version of Pacman. In our case the agent learns how to navigate through a grid world maze, eat food pellets, and eat a ghost. The environment is designed to emulate an agent and gym-compatible environment interaction in a visual way in order to experiment with algorithms such as Q-Learning and Policy Iteration.
 
 **Game Rules:**
 - The Pac-Man attempts to eat all pellets while avoiding ghosts. Both the Pac-Man and the ghosts start in the same location.
@@ -23,8 +23,8 @@ Our project's purpose is to implement a custom gym environment with an agent tha
 - Then navigate into the "src" directory
 - We can run multiple episodes via the following command: "python src/test_pacman.py -p GreedyAgent -l smallClassic --frameTime 0.1"
 - The following are the command-line arguments specified:
-    -p: Pac-Man agent type (ex. GreedyAgent, RandomAgent)
-    -l: The layout to use (ex. smallClassic, mediumClassic)
-    --frameTime: Affects the speed of the display
+- -p: Pac-Man agent type (ex. GreedyAgent, RandomAgent)
+- -l: The layout to use (ex. smallClassic, mediumClassic)
+- --frameTime: Affects the speed of the display
 
 
