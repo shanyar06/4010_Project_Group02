@@ -1,5 +1,5 @@
 import gymnasium as gym
-from gymnasium import spaces
+from gym import spaces
 import numpy as np
 import ghostAgents
 import multiAgents
@@ -34,11 +34,12 @@ class PacmanEnv(gym.Env):
                                         ghosts, display, False,
                                         catchExceptions)
         self.done = False
+        
         return self._get_observation()
 
     def _get_observation(self):
         # Convert game state to a numeric array
-        # 0 = empty, 1 = wall, 2 = food, 3 = pacman, 4 = ghost
+        # 0 = empty, 1 = wall, 2 = food, 3 = pacman, 4 = ghost, 5 = capsule
         grid = np.zeros(self.grid_size, dtype=np.int8)
         
         state = self.game.state
@@ -47,6 +48,7 @@ class PacmanEnv(gym.Env):
         food = state.getFood()
         pacmanPos = state.getPacmanPosition()
         ghostPos = state.getGhostPositions()
+        capsules = state.getCapsules()
 
         for x in range(walls.width):
             for y in range(walls.height):
@@ -63,6 +65,11 @@ class PacmanEnv(gym.Env):
         
         for gpos in ghostPos:
             grid[int(gpos[1]), int(gpos[0])] = 4
+
+        for cpos in capsules:
+            grid[int(cpos[1]), int(cpos[0])] = 5
+        
+        print(grid)
 
         return grid
 
