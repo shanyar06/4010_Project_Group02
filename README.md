@@ -22,7 +22,6 @@ Our project's purpose is to implement a custom gym environment with an agent tha
 - In the root folder, run "pip install -r requirements.txt"
 - Then navigate into the "src" directory
 - We can run multiple episodes via the following command: "python src/test_pacman.py -p GreedyAgent -l smallClassic --frameTime 0.1"
-
 - The following are the command-line arguments specified:
     -p: Pac-Man agent type (ex. GreedyAgent, RandomAgent)
     -l: The layout to use (ex. smallClassic, mediumClassic)
