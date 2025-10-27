@@ -19,6 +19,7 @@ class PacmanEnv(gym.Env):
         self.observation_space = spaces.Box(low=0, high=5, shape=self.grid_size, dtype=np.int8)
         self.agent = pacman
         self.rules = pacmanFile.ClassicGameRules(timeout)
+        self.reward = 0 
 
 
         self.ghosts = [ghostAgents.RandomGhost(i+1) for i in range(2)]
@@ -81,9 +82,9 @@ class PacmanEnv(gym.Env):
             self.game.display.update(self.game.state.data)
 
         for i, ghost in enumerate(self.ghosts):
+            self.done = self.game.state.isWin() or self.game.state.isLose()
             if(self.done):
                 break
-            self.done = self.game.state.isWin() or self.game.state.isLose()
 
             g_action = ghost.getAction(self.game.state)
  
@@ -93,7 +94,8 @@ class PacmanEnv(gym.Env):
 
 
         # TODO: Compute reward and done
-        reward = self.game.state.getScore()
+        prevReward = self.reward
+        self.reward = self.game.state.getScore()
 
         self.done = self.game.state.isWin() or self.game.state.isLose()
         self.rules.process(self.game.state, self.game)
@@ -101,9 +103,9 @@ class PacmanEnv(gym.Env):
 
         obs = self._get_observation()
 
-        print(reward, self.done)
+        print(prevReward, self.done)
 
-        return obs, reward, self.done, {}
+        return obs, prevReward, self.done, {}
 
     def close(self):
         pass
