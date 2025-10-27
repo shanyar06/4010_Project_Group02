@@ -43,9 +43,6 @@ from game import GameStateData
 from game import Game
 from game import Directions
 from game import Actions
-import ghostAgents
-import graphicsDisplay
-import multiAgents
 from util import nearestPoint
 from util import manhattanDistance
 import util
@@ -56,6 +53,13 @@ import time
 import random
 import os
 import pprint
+import gymnasium as gym
+from gym import spaces
+import numpy as np
+import graphicsDisplay
+import ghostAgents
+import multiAgents
+import game
 
 ###################################################
 # YOUR INTERFACE TO THE PACMAN WORLD: A GameState #
@@ -163,7 +167,7 @@ class GameState:
 
     def getGhostState(self, agentIndex):
         if agentIndex == 0 or agentIndex >= self.getNumAgents():
-            raise Exception("Invalid index passed to getGhostState")
+            raise Exception("Invalid index", agentIndex, "passed to getGhostState")
         return self.data.agentStates[agentIndex]
 
     def getGhostPosition(self, agentIndex):
@@ -310,6 +314,7 @@ class ClassicGameRules:
         if not self.quiet:
             print("Pacman emerges victorious! Score: %d" % state.data.score)
         game.gameOver = True
+        return state.data.score
 
     def lose(self, state, game):
         if not self.quiet:
@@ -695,6 +700,7 @@ def runGames(layout, pacman, ghosts, display, numGames, record, numTraining=0, c
             rules.quiet = False
         game = rules.newGame(layout, pacman, ghosts,
                              gameDisplay, beQuiet, catchExceptions)
+        print("Starting Game #", i + 1)
         game.run()
         if not beQuiet:
             games.append(game)
@@ -720,8 +726,11 @@ def runGames(layout, pacman, ghosts, display, numGames, record, numTraining=0, c
         print('Record:       ', ', '.join(
             [['Loss', 'Win'][int(w)] for w in wins]))
 
-    return games
+    return games, game
 
+def startGame(layout, pacman, ghosts, display, catchExceptions=False, timeout=30):
+    rules = ClassicGameRules(timeout)
+    return rules.newGame(layout, pacman, ghosts, display, catchExceptions)
 
 if __name__ == '__main__':
     """
@@ -735,7 +744,6 @@ if __name__ == '__main__':
     > python pacman.py --help
     """
     args = readCommand(sys.argv[1:])  # Get game components based on input
-    pprint.pprint(args)
     runGames(**args)
 
     # import cProfile

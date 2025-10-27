@@ -45,6 +45,7 @@ class RandomGhost(GhostAgent):
             dist[a] = 1.0
         dist.normalize()
         return dist
+    
 
 
 class DirectionalGhost(GhostAgent):

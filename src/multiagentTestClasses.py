@@ -147,7 +147,7 @@ def run(lay, layName, pac, ghosts, disp, nGames=1, name='games'):
     """
     starttime = time.time()
     print('*** Running %s on' % name, layName, '%d time(s).' % nGames)
-    games = pacman.runGames(lay, pac, ghosts, disp,
+    games, _ = pacman.runGames(lay, pac, ghosts, disp,
                             nGames, False, catchExceptions=True, timeout=120)
     print('*** Finished running %s on' % name, layName,
           'after %d seconds.' % (time.time() - starttime))
@@ -509,7 +509,7 @@ class EvalAgentTest(testClasses.TestCase):
         disp = self.question.getDisplay()
 
         random.seed(self.seed)
-        games = pacman.runGames(lay, agent, self.ghosts, disp, self.numGames,
+        games, _= pacman.runGames(lay, agent, self.ghosts, disp, self.numGames,
                                 False, catchExceptions=True, timeout=self.maxTime)
         totalTime = time.time() - startTime
 
