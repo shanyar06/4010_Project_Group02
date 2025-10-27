@@ -104,6 +104,35 @@ class PacmanEnv(gym.Env):
         obs = self._get_observation()
 
         return obs, prevReward, self.done, {}
+    
+    def render(self, final_reward = None, episode = None, num_steps = None):
+        # rendering a human readable episode summary after done is true.
 
+        # making sure that the game exists
+        if not hasattr(self, "game") or self.game is None:
+            print("Nothing to render")
+            return
+        
+        state = self.game.state
+        if state.isWin():
+            result = "Won"
+        if state.isLose():
+            result = "Lost"
+        
+        # Displaying
+        print("-----------------------")
+        print("Pac-Man Episode Summary")
+        print("-----------------------")
+
+        if episode is not None:
+            print(f"Episode: {episode}")
+        
+        if final_reward is not None:
+            print(f"Final reward is {final_reward}")
+
+        if num_steps is not None:
+            print(f"It took the agent {num_steps} steps")
+        
+        print(f"Overall Pac-Man outcome: {result}")
     def close(self):
         pass
