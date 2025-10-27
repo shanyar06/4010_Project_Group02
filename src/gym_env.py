@@ -20,21 +20,19 @@ class PacmanEnv(gym.Env):
         self.agent = pacman
         self.rules = pacmanFile.ClassicGameRules(timeout)
         self.reward = 0 
-
-
         self.ghosts = [ghostAgents.RandomGhost(i+1) for i in range(2)]
 
-        # Initialize game (does NOT run it)
-        self.game = self.rules.newGame(layout, self.agent, self.ghosts, display, catchExceptions, timeout)
+        # Initialize game (does NOT run it - game does not start until first step in test loop)
+        self.game = self.rules.newGame(layout, self.agent, self.ghosts, display, False, catchExceptions)
         self.game.display.initialize(self.game.state.data)
 
         self.done = False
 
-    def reset(self, layout, pacman, ghosts, display, numGames, record, numTraining=0, catchExceptions=False, timeout=30):
+    def reset(self, layout, pacman, ghosts, display, numGames, record,  catchExceptions=False, timeout=30):
         # Reset the game
         self.game = self.rules.newGame(layout, pacman, 
-                                ghosts,display, 
-            catchExceptions)
+                                        ghosts, display, False,
+                                        catchExceptions)
         self.done = False
         return self._get_observation()
 
@@ -71,16 +69,20 @@ class PacmanEnv(gym.Env):
     
     def step(self):
 
+        # Generate action for Pacman agent - greedy policy
         state = self.game.state
         action = self.agent.getAction(state)
 
+        # Update state 
         state = self.game.state
         next_state = state.generateSuccessor(0, action)
         self.game.state = next_state
 
+        # Update display based on action 
         if hasattr(self.game, 'display') and self.game.display is not None:
             self.game.display.update(self.game.state.data)
 
+        # Generate action for each ghost, update state and display
         for i, ghost in enumerate(self.ghosts):
             self.done = self.game.state.isWin() or self.game.state.isLose()
             if(self.done):
@@ -93,17 +95,13 @@ class PacmanEnv(gym.Env):
                 self.game.display.update(self.game.state.data)
 
 
-        # TODO: Compute reward and done
+        # Compute reward and done
         prevReward = self.reward
         self.reward = self.game.state.getScore()
 
         self.done = self.game.state.isWin() or self.game.state.isLose()
-        self.rules.process(self.game.state, self.game)
-
 
         obs = self._get_observation()
-
-        print(prevReward, self.done)
 
         return obs, prevReward, self.done, {}
 
