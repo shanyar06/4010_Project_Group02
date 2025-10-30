@@ -28,4 +28,5 @@ Our project's purpose is to implement a custom gym environment with an agent tha
     - -l: The layout to use (ex. smallClassic, mediumClassic)
     - --frameTime: Affects the speed of the display
 
-
+**Referenced Repo**
+The Github repository we're referencing implements an Approximate Q-Learning approach to train a Pacman agent. The implementation uses Iterative Deepening Search (IDS) to measure ghost proximity more accurately than Manhattan distance and defines a straightforward reward function, assigning large penalties for hitting active ghosts and positive rewards for eating scared ghosts, food pellets, or winning the game. The model was trained on the mediumClassic map and achieved up to 90–100% win rates after about 200 games. However, the project can be improved in several ways. We plan to improve it by replacing the linear model 
