@@ -1,0 +1,36 @@
+﻿Bi-Weekly Project Report (Group 2) - October 30, 2025
+________________
+
+
+Rachel:
+What has been done:
+* Implemented gym env for referenced repo
+* README on git 
+What will be done:
+* Implement an algorithm (DQN)
+* Analysis of algorithm 
+Youssef:
+What has been done:
+* Implemented gym env for referenced repo. The 
+* README on git
+What will be done:
+* Implement an algorithm in the gym env (PPO)
+* Analysis of algorithm 
+Shanya:
+What has been done:
+* Integrated gym env with the referenced repo
+What will be done:
+* Implement an RL algorithm (approximate Q-Learning)
+* Explain the differences between tabular Q-Learning and approximate Q-Learning
+* Analysis of algorithm
+
+Pallav:
+What has been done:
+   * Integrated gym env with the reference repo
+   * Added lines for logging/rendering including summaries for each episode
+   * Contributed towards the Readme
+What will be done:
+   * Will implement an overall summary which is the summary over multiple episodes.
+   * Implement an RL algorithm (Tabular Q-Learning).
+   * Explain the differences between tabular Q-Learning and approximate Q-Learning.
+   * Analysis of algorithm
