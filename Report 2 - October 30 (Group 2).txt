@@ -33,4 +33,8 @@ What will be done:
    * Will implement an overall summary which is the summary over multiple episodes.
    * Implement an RL algorithm (Tabular Q-Learning).
    * Explain the differences between tabular Q-Learning and approximate Q-Learning.
+
    * Analysis of algorithm
+
+Comments from TA, October 30th:
+Good. Keep it up.
