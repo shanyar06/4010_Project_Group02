@@ -1,0 +1,42 @@
+﻿Bi-Weekly Project Report (Group 2) - November 15, 2025
+________________
+
+
+Rachel:
+What has been done:
+* Implemented the DQN agent (replay buffer, target network, epsilon decay).
+* Ran initial training episodes and verified stable env interactions.
+* Logged episode metrics (loss, rewards, Q-values).
+What will be done:
+* Tune hyperparameters for stable learning.
+* Begin DQN performance analysis.
+* Add finalized code to Github
+
+Youssef:
+What has been done:
+   * Implemented PPO (policy/value networks + clipping objective).
+   * Verified PPO training loop and interactions with the Gym env.
+   * Added reward-curve visualizations.
+What will be done:
+   * Run extended PPO training for convergence testing.
+   * Compare PPO trends with value-based methods.
+   * Add finalized code to Github
+Shanya:
+What has been done:
+   * Implemented approximate Q-Learning with feature extraction.
+   * Ran tests comparing tabular vs. approximate Q-Learning.
+   * Documented key differences between the two methods.
+   * Add finalized code to Github
+   * What will be done:
+   * Finalize learning curves for feature-based Q-Learning.
+   * Start cross-algorithm analysis (tabular, approx., DQN).
+
+Pallav:
+What has been done:
+      * Implemented tabular Q-Learning and multi-episode summaries.
+      * Improved logging/rendering for batch-level statistics.
+      * Unified agent interfaces for consistent training loops.
+      * Add finalized code to Github
+What will be done:
+      * Compile final statistics across all algorithms.
+      * Draft comparison section for the final report.
