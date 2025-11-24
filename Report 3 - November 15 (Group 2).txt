@@ -39,4 +39,18 @@ What has been done:
       * Add finalized code to Github
 What will be done:
       * Compile final statistics across all algorithms.
+
       * Draft comparison section for the final report.
+
+Comments:
+You’re in a good place for the halfway mark: the algorithms are implemented, training is running, and the next month can focus on experiments, comparisons, and analysis rather than new coding features.
+
+For the next deliverable(s), aim to have:
+
+A. Full learning curves for each algorithm
+
+B. Cross-algorithm comparisons (performance, stability, sample efficiency)
+
+C. Ablations that tie back to the original proposal feedback
+
+D. Code pushed, organized, and documented
