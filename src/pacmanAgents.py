@@ -22,8 +22,10 @@ import util
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 import numpy as np
 from collections import deque
+from featureExtractor import SimpleExtractor
 
 class LeftTurnAgent(game.Agent):
     "An agent that turns left at every opportunity"
@@ -173,13 +175,14 @@ def scoreEvaluation(state):
 
 # DQN Agent Policy 
 class DQNAgent(Agent):
-    def __init__(self, epsilon=0.1, learningRate = 0.01, discountFactor=0.9, batchSize=64, targetUpdateFreq=1000):
+    def __init__(self, epsilon=0.1, learningRate = 0.01, discountFactor=0.9, batchSize=64, targetUpdateFreq=1000, numTraining=0):
         super().__init__()
         self.epsilon = epsilon
         self.learningRate = learningRate
         self.discountFactor = discountFactor
         self.batchSize = batchSize
         self.targetUpdateFreq = targetUpdateFreq
+        self.numTraining = numTraining
 
         self.state_dim = 220  # 11 x 20 grid size might need to adjust based on observation space
         self.action_dim = 5 # up, down, left, right, stop 
@@ -360,4 +363,258 @@ class QNetwork(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-  
+class ApproximateQAgent(Agent):
+    '''
+    implementation of Approximate Q-Learning Agent
+    uses SimpleExtractor and util.Counter.
+    '''
+    def __init__(self,
+                 epsilon=0.1,
+                 learningRate=0.01,
+                 discountFactor=0.9,
+                 numTraining=0):
+        super().__init__()
+
+        self.epsilon = float(epsilon)
+        self.alpha = float(learningRate)
+        self.gamma = float(discountFactor)
+        self.numTraining = int(numTraining)
+
+        self.featExtractor = SimpleExtractor()
+        self.weights = util.Counter()
+
+        self.last_state = None
+        self.last_action = None
+        self.last_score = 0.0
+        self.episodes_so_far = 0
+
+    #q-value
+    def getQValue(self, state, action):
+        '''
+        Q(s,a) = w · f(s,a)
+        '''
+        feats = self.featExtractor.getFeatures(state, action)
+        return sum(self.weights[f] * feats[f] for f in feats)
+
+    def computeValue(self, state):
+        '''
+        V(s) = max_a Q(s,a) 
+        '''
+        actions = state.getLegalPacmanActions()
+        if not actions: return 0.0
+        return max(self.getQValue(state, a) for a in actions)
+
+    def computeAction(self, state):
+        '''
+        greedy policy: argmax_a Q(s,a)
+        '''
+        actions = state.getLegalPacmanActions()
+        if not actions:
+            return None
+
+        values = [(self.getQValue(state, a), a) for a in actions]
+        max_val = max(values, key=lambda x: x[0])[0]
+
+        best_actions = [a for (v, a) in values if v == max_val]
+        return random.choice(best_actions)
+
+    def getAction(self, state):
+        '''
+        epsilon-greedy action selection.
+        Performs update for previous transition.
+        '''
+        #update weights for previous step
+        if self.last_state is not None and self.last_action is not None:
+            reward = state.getScore() - self.last_score
+            done = state.isWin() or state.isLose()
+            self.update(self.last_state, self.last_action, state, reward, done)
+
+        legal = state.getLegalPacmanActions()
+        if not legal: return None
+
+        if random.random() < self.epsilon:
+            action = random.choice(legal)
+        else:
+            action = self.computeAction(state)
+
+        #store step for next update
+        self.last_state = state
+        self.last_action = action
+        self.last_score = state.getScore()
+
+        return action
+
+    #q-learning update
+    def update(self, state, action, nextState, reward, terminal):
+        '''
+        w_i <- w_i + alpha * (r + gamma max_a' Q(s',a') - Q(s,a)) * f_i(s,a)
+        '''
+        feats = self.featExtractor.getFeatures(state, action)
+        current_q = self.getQValue(state, action)
+
+        if terminal: target = reward
+        else:
+            target = reward + self.gamma * self.computeValue(nextState)
+
+        td_error = target - current_q
+
+        for f in feats:
+            self.weights[f] += self.alpha * td_error * feats[f]
+
+
+    def final(self, state):
+        '''
+        final update.
+        '''
+        if self.last_state is not None and self.last_action is not None:
+            reward = state.getScore() - self.last_score
+            self.update(self.last_state, self.last_action, state, reward, terminal=True)
+
+        self.episodes_so_far = self.episodes_so_far + 1
+        self.last_state = None
+        self.last_action = None
+        self.last_score = 0.0
+
+        # turn off exploration after training
+        if self.episodes_so_far >= self.numTraining:
+            self.epsilon = 0.0
+
+class PPOAgent(Agent):
+    def __init__(self, lr=0.01, gamma=0.99, clip_eps=0.2):
+        self.torch = torch
+        self.nn = nn
+        self.optim = optim
+
+        self.gamma = gamma
+        self.clip_eps = clip_eps
+
+        # Networks will be initialized lazily
+        self.policy = None
+        self.value = None
+        self.policy_opt = None
+        self.value_opt = None
+
+        # Stores memory
+        self.states = []
+        self.actions = []
+        self.logprobs = []
+        self.rewards = []
+
+    def get_observations(self, state):
+        pac = state.getPacmanPosition()
+        ghosts = state.getGhostPositions()
+
+        features = [pac[0], pac[1]]
+        for g in ghosts:
+            features.append(g[0] - pac[0])
+            features.append(g[1] - pac[1])
+
+        return features
+
+    def init_networks(self, state_dim, action_dim):
+        if self.policy is not None:
+            return
+        
+        # Neural Networks
+        nn = self.nn
+        torch = self.torch
+        optim = self.optim
+
+        self.policy = nn.Sequential(
+            nn.Linear(state_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, action_dim),
+            nn.Softmax(dim=-1)
+        )
+
+        self.value = nn.Sequential(
+            nn.Linear(state_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
+
+        self.policy_opt = optim.Adam(self.policy.parameters(), lr=0.01)
+        self.value_opt = optim.Adam(self.value.parameters(), lr=0.01)
+
+    def select_action(self, state_vec, legal_actions):
+        torch = self.torch
+
+        probs = self.policy(torch.tensor(state_vec, dtype=torch.float32))
+        dist = torch.distributions.Categorical(probs)
+
+        action_idx = dist.sample()
+        logprob = dist.log_prob(action_idx)
+
+        # store memory
+        self.states.append(state_vec)
+        self.actions.append(action_idx)
+        self.logprobs.append(logprob)
+
+        return legal_actions[action_idx.item()]
+
+    def update(self):
+        if not self.states:
+            return
+
+        torch = self.torch
+
+        # Convert to tensors
+        states = torch.tensor(self.states, dtype=torch.float32)
+        actions = torch.stack(self.actions)
+        old_logprobs = torch.stack(self.logprobs)
+
+        # Compute returns
+        returns = []
+        G = 0
+        for r in reversed(self.rewards):
+            G = r + self.gamma * G
+            returns.insert(0, G)
+        returns = torch.tensor(returns, dtype=torch.float32)
+
+        # Compute advantages
+        values = self.value(states).squeeze()
+        adv = returns - values.detach()
+
+        # PPO Policy loss
+        probs = self.policy(states)
+        dist = torch.distributions.Categorical(probs)
+        new_logprobs = dist.log_prob(actions)
+
+        ratio = torch.exp(new_logprobs - old_logprobs)
+
+        clipped = torch.clamp(ratio, 1 - self.clip_eps, 1 + self.clip_eps)
+        policy_loss = -torch.min(ratio * adv, clipped * adv).mean()
+
+        # Value loss
+        value_loss = (returns - values).pow(2).mean()
+
+        # Optimize
+        self.policy_opt.zero_grad()
+        policy_loss.backward()
+        self.policy_opt.step()
+
+        self.value_opt.zero_grad()
+        value_loss.backward()
+        self.value_opt.step()
+
+        # Reset memory
+        self.states = []
+        self.actions = []
+        self.logprobs = []
+        self.rewards = []
+
+    def getAction(self, state):
+        legal = state.getLegalPacmanActions()
+        if Directions.STOP in legal:
+            legal.remove(Directions.STOP)
+
+        s = self.get_observations(state)
+
+        # Lazy init network
+        self.init_networks(state_dim=len(s), action_dim=len(legal))
+
+        # Pick action
+        action = self.select_action(s, legal)
+        return action
+
+    
