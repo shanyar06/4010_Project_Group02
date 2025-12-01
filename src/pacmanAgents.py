@@ -12,12 +12,18 @@
 # Pieter Abbeel (pabbeel@cs.berkeley.edu).
 
 
+import pandas as pd
+from matplotlib import pyplot as plt
 from pacman import Directions
 from game import Agent
 import random
 import game
 import util
-
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
+from collections import deque
 
 class LeftTurnAgent(game.Agent):
     "An agent that turns left at every opportunity"
@@ -155,3 +161,196 @@ class TabularQAgent(Agent):
 
 def scoreEvaluation(state):
     return state.getScore()
+
+# DQN Agent Policy 
+
+class DQNAgent(Agent):
+    def __init__(self, epsilon=0.1, learningRate = 0.01, discountFactor=0.9, batchSize=64, targetUpdateFreq=1000):
+        super().__init__()
+        self.epsilon = epsilon
+        self.learningRate = learningRate
+        self.discountFactor = discountFactor
+        self.batchSize = batchSize
+        self.targetUpdateFreq = targetUpdateFreq
+
+        self.state_dim = 220  # 11 x 20 grid size might need to adjust based on observation space
+        self.action_dim = 5 # up, down, left, right, stop 
+
+        # Q-network and target network
+        self.q_network = QNetwork(self.state_dim, self.action_dim)
+
+        self.target_network = QNetwork(self.state_dim, self.action_dim)
+        self.target_network.load_state_dict(self.q_network.state_dict())
+
+        # Adam optimizer - update neural network weights 
+        self.optimizer = torch.optim.Adam(self.q_network.parameters(), lr=self.learningRate) 
+
+        # replay buffer
+        # store past experiences for training   
+        self.replay_buffer = ReplayBuffer()
+        self.steps_done = 0
+
+        self.reward_history = []
+        self.loss_history = []
+
+        self.last_state = None  
+        self.last_action = None
+
+    
+    def getAction(self, state):
+        observations = self._get_observation(state)
+        flat_obs = torch.FloatTensor(observations).view(-1)  # flatten (220,)
+        legal = state.getLegalPacmanActions()
+
+        if random.random() < self.epsilon:
+            action = random.choice(legal)
+            action_index = self._action_to_index(action)
+        else:
+            with torch.no_grad():
+                q_values = self.q_network(flat_obs.unsqueeze(0))
+                action_index = q_values.argmax().item()
+                action = self._index_to_action(action_index, legal)
+
+        # observe transition if previous state exists
+        if self.last_state is not None and self.last_action is not None:
+            # reward is difference in score
+            reward = state.getScore() - self.last_score
+            done = state.isWin() or state.isLose()
+            self.observeTransition(self.last_state, self.last_action, flat_obs.numpy(), reward, done)
+
+        self.last_state = flat_obs.numpy()
+        self.last_action = action_index
+        self.last_score = state.getScore()
+
+        return action
+
+    def _get_observation(self, state):
+        grid = np.zeros((11,20), dtype=np.float32)
+
+        walls = state.getWalls()
+        food = state.getFood()
+        pacmanPos = state.getPacmanPosition()
+        ghostPos = state.getGhostPositions()
+        capsules = state.getCapsules()
+
+        for x in range(walls.width):
+            for y in range(walls.height):
+                if walls[x][y]:
+                    grid[y, x] = 1
+
+
+        for x in range(food.width):
+            for y in range(food.height):
+                if food[x][y]:
+                    grid[y, x] = 2
+
+        grid[int(pacmanPos[1]), int(pacmanPos[0])] = 3
+        
+        for gpos in ghostPos:
+            grid[int(gpos[1]), int(gpos[0])] = 4
+
+        for cpos in capsules:
+            grid[int(cpos[1]), int(cpos[0])] = 5
+
+        return grid
+
+    def _action_to_index(self, action):
+        action_map = {
+            Directions.NORTH: 0,
+            Directions.SOUTH: 1,
+            Directions.EAST: 2,
+            Directions.WEST: 3,
+            Directions.STOP: 4
+        }
+        return action_map[action]
+    
+    def _index_to_action(self, index, legal_actions):
+        index_map = {
+            0: Directions.NORTH,
+            1: Directions.SOUTH,
+            2: Directions.EAST,
+            3: Directions.WEST,
+            4: Directions.STOP
+        }
+        action = index_map[index]
+        if action in legal_actions:
+            return action
+        else:
+            return random.choice(legal_actions)
+    
+    def observeTransition(self, old_state, action, new_state, reward, done):
+        self.replay_buffer.push(old_state, action, reward, new_state, done)
+        self.reward_history.append(reward)
+        loss = self.trainStep()
+        if loss is not None:
+            self.loss_history.append(loss.item())
+
+    def trainStep(self):
+        if len(self.replay_buffer) < self.batchSize:
+            return  # not enough samples to train
+
+        # sample batch
+        states, actions, rewards, next_states, done = self.replay_buffer.sample(self.batchSize)
+
+        states = torch.FloatTensor(states)
+        actions = torch.LongTensor(actions).unsqueeze(1)
+        rewards = torch.FloatTensor(rewards).unsqueeze(1)
+        next_states = torch.FloatTensor(next_states)
+        done = torch.FloatTensor(done).unsqueeze(1)
+
+        # compute current Q values
+        curr_q_values = self.q_network(states).gather(1, actions)
+
+        # compute target Q values
+        with torch.no_grad():
+            next_q_values = self.target_network(next_states).max(1)[0].unsqueeze(1)
+            target_q_values = rewards + (self.discountFactor * next_q_values * (1 - done))
+
+        # compute loss
+        loss = F.mse_loss(curr_q_values, target_q_values)
+
+        # optimize the model
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        # update target network
+        self.steps_done += 1
+        if self.steps_done % self.targetUpdateFreq == 0:
+            self.target_network.load_state_dict(self.q_network.state_dict())
+        
+        return loss 
+    
+    
+class ReplayBuffer: 
+    def __init__(self, capacity=10000):
+        # store transitions 
+        self.buffer = deque(maxlen=capacity)
+    
+    def push(self, state, action, reward, next_state, done):
+        # add transition to buffer
+        self.buffer.append((state, action, reward, next_state, done))
+    
+    def sample(self, batch_size):
+        # sample a batch of transitions
+        batch = random.sample(self.buffer, batch_size)
+        state, action, reward, next_state, done = map(np.stack, zip(*batch))
+        return state, action, reward, next_state, done
+
+    def __len__(self):
+        return len(self.buffer)
+    
+class QNetwork(nn.Module):
+    # neural network for approximating Q-values
+    def __init__(self, input_dim, output_dim, hidden_dim=128):
+        super(QNetwork, self).__init__()
+        self.fc1 = nn.Linear(input_dim, hidden_dim)
+        self.fc2 = nn.Linear(hidden_dim, hidden_dim)
+        self.fc3 = nn.Linear(hidden_dim, output_dim)
+    
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+  
