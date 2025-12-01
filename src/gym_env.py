@@ -28,7 +28,7 @@ class PacmanEnv(gym.Env):
 
         self.done = False
 
-    def reset(self, layout, pacman, ghosts, display, numGames, record,  catchExceptions=False, timeout=30):
+    def reset(self, layout, pacman, ghosts, display, numGames, numTraining, record,  catchExceptions=False, timeout=30):
         # Reset the game
         self.game = self.rules.newGame(layout, pacman, 
                                         ghosts, display, False,
