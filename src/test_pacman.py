@@ -1,7 +1,7 @@
 from gym_env import PacmanEnv
 from pacman import readCommand
 import sys
-from pacmanAgents import GreedyAgent, TabularQAgent
+from pacmanAgents import GreedyAgent, TabularQAgent, ApproximateQAgent
 
 args = readCommand(sys.argv[1:])
 
@@ -11,7 +11,15 @@ episode_returns: list[float] = [] # stores each episode's return
 
 for episode in range(NUM_EPISODES):
     env = PacmanEnv(**args)
-    obs = env.reset(**args)
+    #obs = env.reset(**args)
+    obs = env.reset(
+        args['layout'],
+        args['pacman'],
+        args['ghosts'],
+        args['display'],
+        args['numGames'],
+        args['record'],
+    )
 
     done = False
     step_count = 0

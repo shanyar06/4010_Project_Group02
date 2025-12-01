@@ -24,6 +24,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from collections import deque
+from featureExtractor import SimpleExtractor
 
 class LeftTurnAgent(game.Agent):
     "An agent that turns left at every opportunity"
@@ -165,13 +166,14 @@ def scoreEvaluation(state):
 # DQN Agent Policy 
 
 class DQNAgent(Agent):
-    def __init__(self, epsilon=0.1, learningRate = 0.01, discountFactor=0.9, batchSize=64, targetUpdateFreq=1000):
+    def __init__(self, epsilon=0.1, learningRate = 0.01, discountFactor=0.9, batchSize=64, targetUpdateFreq=1000, numTraining=0):
         super().__init__()
         self.epsilon = epsilon
         self.learningRate = learningRate
         self.discountFactor = discountFactor
         self.batchSize = batchSize
         self.targetUpdateFreq = targetUpdateFreq
+        self.numTraining = numTraining
 
         self.state_dim = 220  # 11 x 20 grid size might need to adjust based on observation space
         self.action_dim = 5 # up, down, left, right, stop 
@@ -353,4 +355,118 @@ class QNetwork(nn.Module):
         x = F.relu(self.fc2(x))
         return self.fc3(x)
 
-  
+class ApproximateQAgent(Agent):
+    '''
+    implementation of Approximate Q-Learning Agent
+    uses SimpleExtractor and util.Counter.
+    '''
+    def __init__(self,
+                 epsilon=0.1,
+                 learningRate=0.01,
+                 discountFactor=0.9,
+                 numTraining=0):
+        super().__init__()
+
+        self.epsilon = float(epsilon)
+        self.alpha = float(learningRate)
+        self.gamma = float(discountFactor)
+        self.numTraining = int(numTraining)
+
+        self.featExtractor = SimpleExtractor()
+        self.weights = util.Counter()
+
+        self.last_state = None
+        self.last_action = None
+        self.last_score = 0.0
+        self.episodes_so_far = 0
+
+    #q-value
+    def getQValue(self, state, action):
+        '''
+        Q(s,a) = w · f(s,a)
+        '''
+        feats = self.featExtractor.getFeatures(state, action)
+        return sum(self.weights[f] * feats[f] for f in feats)
+
+    def computeValue(self, state):
+        '''
+        V(s) = max_a Q(s,a) 
+        '''
+        actions = state.getLegalPacmanActions()
+        if not actions: return 0.0
+        return max(self.getQValue(state, a) for a in actions)
+
+    def computeAction(self, state):
+        '''
+        greedy policy: argmax_a Q(s,a)
+        '''
+        actions = state.getLegalPacmanActions()
+        if not actions:
+            return None
+
+        values = [(self.getQValue(state, a), a) for a in actions]
+        max_val = max(values, key=lambda x: x[0])[0]
+
+        best_actions = [a for (v, a) in values if v == max_val]
+        return random.choice(best_actions)
+
+    def getAction(self, state):
+        '''
+        epsilon-greedy action selection.
+        Performs update for previous transition.
+        '''
+        #update weights for previous step
+        if self.last_state is not None and self.last_action is not None:
+            reward = state.getScore() - self.last_score
+            done = state.isWin() or state.isLose()
+            self.update(self.last_state, self.last_action, state, reward, done)
+
+        legal = state.getLegalPacmanActions()
+        if not legal: return None
+
+        if random.random() < self.epsilon:
+            action = random.choice(legal)
+        else:
+            action = self.computeAction(state)
+
+        #store step for next update
+        self.last_state = state
+        self.last_action = action
+        self.last_score = state.getScore()
+
+        return action
+
+    #q-learning update
+    def update(self, state, action, nextState, reward, terminal):
+        '''
+        w_i <- w_i + alpha * (r + gamma max_a' Q(s',a') - Q(s,a)) * f_i(s,a)
+        '''
+        feats = self.featExtractor.getFeatures(state, action)
+        current_q = self.getQValue(state, action)
+
+        if terminal: target = reward
+        else:
+            target = reward + self.gamma * self.computeValue(nextState)
+
+        td_error = target - current_q
+
+        for f in feats:
+            self.weights[f] += self.alpha * td_error * feats[f]
+
+
+    def final(self, state):
+        '''
+        final update.
+        '''
+        if self.last_state is not None and self.last_action is not None:
+            reward = state.getScore() - self.last_score
+            self.update(self.last_state, self.last_action, state, reward, terminal=True)
+
+        self.episodes_so_far = self.episodes_so_far + 1
+        self.last_state = None
+        self.last_action = None
+        self.last_score = 0.0
+
+        # turn off exploration after training
+        if self.episodes_so_far >= self.numTraining:
+            self.epsilon = 0.0
