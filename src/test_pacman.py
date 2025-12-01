@@ -1,7 +1,7 @@
 from gym_env import PacmanEnv
 from pacman import readCommand
 import sys
-from pacmanAgents import GreedyAgent
+from pacmanAgents import GreedyAgent, TabularQAgent
 
 args = readCommand(sys.argv[1:])
 
