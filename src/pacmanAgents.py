@@ -81,7 +81,7 @@ class TabularQAgent(Agent):
         # A Q-learning update requires us to keep track of prev_state, prev_action, prev_reward, and curr_state. Storing the first 3 all in variables and initializing them none/0.0.
         self.prev_state = None
         self.prev_action = None
-        self.prev_reward = 0.0
+        self.prev_score = 0.0
         
     # We need to be able to represent the state into a format that the Q-Learning algorithm can store in its Q-table. This is done in the representState function.
         # This must be hashable and compact
@@ -93,6 +93,12 @@ class TabularQAgent(Agent):
 
     # Choosing an action to take based on the epsilon greedy policy and Q-Learning
     def getAction(self, state):
+        # print("Entered getAction in TabularQAgent")
+        
+        if self.prev_state is not None and self.prev_action is not None:
+            reward = state.getScore() - self.prev_score
+            self.updateQ(state, reward)
+
         state_representation = self.representState(state)
 
         # Generate candidate actions
@@ -123,10 +129,13 @@ class TabularQAgent(Agent):
         # Current state-action pair is needed when updating the Q-table
         self.prev_state = state_representation
         self.prev_action = action
+        self.prev_score = state.getScore()
 
         return action
 
     def updateQ(self, state, reward):
+        # print("Entered updateQ in TabularQAgent")
+
         # using the previous state and previous action to update the Q-value based on the reward and the next state's best action
         state_representation = self.representState(state)
 
@@ -153,7 +162,7 @@ class TabularQAgent(Agent):
 
         # Storing the q_value for the previous state-action pair (defaults to 0.0 if not found)
         prev_q_value = self.Q_table.get((self.prev_state, self.prev_action), 0.0)
-        # Computing the new q_value using the q_learning formula
+        # Computing the new q_value using the q_learning formula 
         new_q_value = prev_q_value + self.alpha * (reward + self.gamma * max_q_next_state - prev_q_value)
 
         # Updating the Q-table entry for the previous state-action pair with the new Q-value
@@ -163,7 +172,6 @@ def scoreEvaluation(state):
     return state.getScore()
 
 # DQN Agent Policy 
-
 class DQNAgent(Agent):
     def __init__(self, epsilon=0.1, learningRate = 0.01, discountFactor=0.9, batchSize=64, targetUpdateFreq=1000):
         super().__init__()
@@ -319,8 +327,7 @@ class DQNAgent(Agent):
         if self.steps_done % self.targetUpdateFreq == 0:
             self.target_network.load_state_dict(self.q_network.state_dict())
         
-        return loss 
-    
+        return loss   
     
 class ReplayBuffer: 
     def __init__(self, capacity=10000):
