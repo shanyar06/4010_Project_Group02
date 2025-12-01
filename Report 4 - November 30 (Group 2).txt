@@ -1,0 +1,30 @@
+﻿Bi-Weekly Project Report (Group 2) - November 30, 2025
+________________
+
+
+Rachel:
+What has been done:
+* Implemented DQN algorithm in pacmanAgents.py
+* Implemented analysis for algorithms 
+What will be done:
+* Start work on the final report 
+Youssef:
+What has been done:
+* Implemented PPO algorithm in pacmanAgents.py
+* Implements analysis for algorithms 
+What will be done:
+* Start work on the final report 
+
+
+Shanya:
+What has been done:
+* Implemented Approximate Q-learning algorithm in pacmanAgents.py
+* Implemented analysis for algorithms 
+What will be done:
+* Start work on the final report 
+Pallav:
+What has been done:
+* Implemented tabular Q-learning algorithm in pacmanAlgorithms.py
+* Implemented analysis for algorithms 
+What will be done:
+* Start work on the final report
