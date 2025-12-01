@@ -11,7 +11,7 @@ class PacmanEnv(gym.Env):
 
 
 class PacmanEnv(gym.Env):
-    def __init__(self, layout, pacman, ghosts, display, numGames, record, numTraining=0, catchExceptions=False, timeout=30):
+    def __init__(self, layout, pacman, ghosts, display, numGames, record, catchExceptions=False, timeout=30):
         super(PacmanEnv, self).__init__()
 
         self.action_space = spaces.Discrete(4)
@@ -28,7 +28,7 @@ class PacmanEnv(gym.Env):
 
         self.done = False
 
-    def reset(self, layout, pacman, ghosts, display, numGames, numTraining, record,  catchExceptions=False, timeout=30):
+    def reset(self, layout, pacman, ghosts, display, numGames, record,  catchExceptions=False, timeout=30):
         # Reset the game
         self.game = self.rules.newGame(layout, pacman, 
                                         ghosts, display, False,

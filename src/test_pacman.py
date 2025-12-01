@@ -4,6 +4,7 @@ import sys
 from pacmanAgents import GreedyAgent, TabularQAgent, ApproximateQAgent
 
 args = readCommand(sys.argv[1:])
+agent = args['pacman']
 
 NUM_EPISODES = 3
 
@@ -19,15 +20,25 @@ for episode in range(NUM_EPISODES):
         args['display'],
         args['numGames'],
         args['record'],
+        catchExceptions=args.get('catchExceptions', False),
+        timeout=args.get('timeout', 30)
     )
 
     done = False
     step_count = 0
+    state = obs
 
     while not done:
-        obs, reward, done, info = env.step()
+        next_state, reward, done, info = env.step()
+        state = next_state
         # env.render()
         step_count += 1
+
+    if hasattr(agent, "final"):
+        try:
+            agent.final(state)
+        except AttributeError:
+            pass
 
     env.render(final_reward = reward, episode = episode + 1, num_steps = step_count)
     

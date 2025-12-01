@@ -175,14 +175,14 @@ def scoreEvaluation(state):
 
 # DQN Agent Policy 
 class DQNAgent(Agent):
-    def __init__(self, epsilon=0.1, learningRate = 0.01, discountFactor=0.9, batchSize=64, targetUpdateFreq=1000, numTraining=0):
+    def __init__(self, epsilon=0.1, learningRate = 0.01, discountFactor=0.9, batchSize=64, targetUpdateFreq=1000):
         super().__init__()
         self.epsilon = epsilon
         self.learningRate = learningRate
         self.discountFactor = discountFactor
         self.batchSize = batchSize
         self.targetUpdateFreq = targetUpdateFreq
-        self.numTraining = numTraining
+        #self.numTraining = numTraining
 
         self.state_dim = 220  # 11 x 20 grid size might need to adjust based on observation space
         self.action_dim = 5 # up, down, left, right, stop 
@@ -409,8 +409,8 @@ class ApproximateQAgent(Agent):
         greedy policy: argmax_a Q(s,a)
         '''
         actions = state.getLegalPacmanActions()
-        if not actions:
-            return None
+        if not actions: return 0.0
+        #return None
 
         values = [(self.getQValue(state, a), a) for a in actions]
         max_val = max(values, key=lambda x: x[0])[0]
@@ -430,7 +430,8 @@ class ApproximateQAgent(Agent):
             self.update(self.last_state, self.last_action, state, reward, done)
 
         legal = state.getLegalPacmanActions()
-        if not legal: return None
+        if Directions.STOP in legal:
+            legal.remove(Directions.STOP)
 
         if random.random() < self.epsilon:
             action = random.choice(legal)
