@@ -22,6 +22,7 @@ import util
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 import numpy as np
 from collections import deque
 from featureExtractor import SimpleExtractor
@@ -470,3 +471,143 @@ class ApproximateQAgent(Agent):
         # turn off exploration after training
         if self.episodes_so_far >= self.numTraining:
             self.epsilon = 0.0
+
+class PPOAgent(Agent):
+    def __init__(self, lr=0.01, gamma=0.99, clip_eps=0.2):
+        self.torch = torch
+        self.nn = nn
+        self.optim = optim
+
+        self.gamma = gamma
+        self.clip_eps = clip_eps
+
+        # Networks will be initialized lazily
+        self.policy = None
+        self.value = None
+        self.policy_opt = None
+        self.value_opt = None
+
+        # Stores memory
+        self.states = []
+        self.actions = []
+        self.logprobs = []
+        self.rewards = []
+
+    def get_observations(self, state):
+        pac = state.getPacmanPosition()
+        ghosts = state.getGhostPositions()
+
+        features = [pac[0], pac[1]]
+        for g in ghosts:
+            features.append(g[0] - pac[0])
+            features.append(g[1] - pac[1])
+
+        return features
+
+    def init_networks(self, state_dim, action_dim):
+        if self.policy is not None:
+            return
+        
+        # Neural Networks
+        nn = self.nn
+        torch = self.torch
+        optim = self.optim
+
+        self.policy = nn.Sequential(
+            nn.Linear(state_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, action_dim),
+            nn.Softmax(dim=-1)
+        )
+
+        self.value = nn.Sequential(
+            nn.Linear(state_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 1)
+        )
+
+        self.policy_opt = optim.Adam(self.policy.parameters(), lr=0.01)
+        self.value_opt = optim.Adam(self.value.parameters(), lr=0.01)
+
+    def select_action(self, state_vec, legal_actions):
+        torch = self.torch
+
+        probs = self.policy(torch.tensor(state_vec, dtype=torch.float32))
+        dist = torch.distributions.Categorical(probs)
+
+        action_idx = dist.sample()
+        logprob = dist.log_prob(action_idx)
+
+        # store memory
+        self.states.append(state_vec)
+        self.actions.append(action_idx)
+        self.logprobs.append(logprob)
+
+        return legal_actions[action_idx.item()]
+
+    def update(self):
+        if not self.states:
+            return
+
+        torch = self.torch
+
+        # Convert to tensors
+        states = torch.tensor(self.states, dtype=torch.float32)
+        actions = torch.stack(self.actions)
+        old_logprobs = torch.stack(self.logprobs)
+
+        # Compute returns
+        returns = []
+        G = 0
+        for r in reversed(self.rewards):
+            G = r + self.gamma * G
+            returns.insert(0, G)
+        returns = torch.tensor(returns, dtype=torch.float32)
+
+        # Compute advantages
+        values = self.value(states).squeeze()
+        adv = returns - values.detach()
+
+        # PPO Policy loss
+        probs = self.policy(states)
+        dist = torch.distributions.Categorical(probs)
+        new_logprobs = dist.log_prob(actions)
+
+        ratio = torch.exp(new_logprobs - old_logprobs)
+
+        clipped = torch.clamp(ratio, 1 - self.clip_eps, 1 + self.clip_eps)
+        policy_loss = -torch.min(ratio * adv, clipped * adv).mean()
+
+        # Value loss
+        value_loss = (returns - values).pow(2).mean()
+
+        # Optimize
+        self.policy_opt.zero_grad()
+        policy_loss.backward()
+        self.policy_opt.step()
+
+        self.value_opt.zero_grad()
+        value_loss.backward()
+        self.value_opt.step()
+
+        # Reset memory
+        self.states = []
+        self.actions = []
+        self.logprobs = []
+        self.rewards = []
+
+    def getAction(self, state):
+        legal = state.getLegalPacmanActions()
+        if Directions.STOP in legal:
+            legal.remove(Directions.STOP)
+
+        s = self.get_observations(state)
+
+        # Lazy init network
+        self.init_networks(state_dim=len(s), action_dim=len(legal))
+
+        # Pick action
+        action = self.select_action(s, legal)
+        return action
+
+    
