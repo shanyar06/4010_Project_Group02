@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 from gym_env import PacmanEnv
 from pacman import readCommand
 import sys
@@ -45,3 +46,13 @@ for episode in range(NUM_EPISODES):
     #print("Final reward:", reward)
     episode_returns.append(reward)
     env.close()
+
+# episodes = list(range(1, len(episode_returns) + 1))
+
+# plt.figure(figsize=(8, 5))
+# plt.plot(episodes, episode_returns, marker='o')
+# plt.xlabel("Episode")
+# plt.ylabel("Total Reward")
+# plt.title("Reward per Episode")
+# plt.grid(True)
+# plt.show()
