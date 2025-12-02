@@ -47,6 +47,13 @@ for episode in range(NUM_EPISODES):
     episode_returns.append(reward)
     env.close()
 
+#
+#this is the code to produce a matplot graph.
+#this has been commented out right now, 
+#but this is how we produced our graphs
+#that are uploaded on github repo
+#
+
 # episodes = list(range(1, len(episode_returns) + 1))
 
 # plt.figure(figsize=(8, 5))
